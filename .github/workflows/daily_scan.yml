@@ -1,0 +1,35 @@
+name: Daily Card Scan
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 22:00 UTC = 07:00 KST
+  workflow_dispatch:        # GitHub에서 수동 실행 가능
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scan
+        run: python main.py --now
+        env:
+          EBAY_APP_ID:          ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID:         ${{ secrets.EBAY_CERT_ID }}
+          TELEGRAM_BOT_TOKEN:   ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
+          PRICECHARTING_TOKEN:  ${{ secrets.PRICECHARTING_TOKEN }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:         ${{ secrets.SUPABASE_KEY }}
+          MIN_ROI:              '50'
+          MIN_PRICE_USD:        '100'
+          EXCHANGE_RATE_KRW:    '1380'
