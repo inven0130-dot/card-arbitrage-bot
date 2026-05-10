@@ -3,14 +3,14 @@ name: Daily Card Scan
 on:
   schedule:
     - cron: '0 22 * * *'   # 22:00 UTC = 07:00 KST
-  workflow_dispatch:        # GitHub에서 수동 실행 가능
+  workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     permissions:
-      contents: write       # 레포에 커밋하기 위해 필요
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -35,8 +35,8 @@ jobs:
           git diff --cached --quiet || git commit -m "data: $(date +%Y-%m-%d) price snapshot"
           git push
 
-      - name: Run scan
-        run: python main.py --now
+      - name: Run scan (no sync)
+        run: python main.py --scan-only
         env:
           EBAY_APP_ID:          ${{ secrets.EBAY_APP_ID }}
           EBAY_CERT_ID:         ${{ secrets.EBAY_CERT_ID }}

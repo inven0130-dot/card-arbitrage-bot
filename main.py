@@ -36,12 +36,12 @@ def sync_pricecharting():
         print(f"[{_now()}] PriceCharting 데이터 없음 — 기존 DB 유지")
 
 
-def run_scan():
+def run_scan(sync: bool = True):
     print(f"[{_now()}] ===== 스캔 시작 =====")
-    send("🔍 CGC10 → PSA10 아비트리지 스캔 시작...")
 
-    # 1. PriceCharting DB 갱신 (하루 1회)
-    sync_pricecharting()
+    # 1. PriceCharting DB 갱신 (주 1회 별도 실행 권장)
+    if sync:
+        sync_pricecharting()
 
     # 2. eBay 검색
     try:
@@ -111,8 +111,12 @@ if __name__ == "__main__":
         sync_pricecharting()
         sys.exit(0)
 
+    if "--scan-only" in args:
+        run_scan(sync=False)
+        sys.exit(0)
+
     if "--now" in args:
-        run_scan()
+        run_scan(sync=True)
         sys.exit(0)
 
     print(f"카드 아비트리지 봇 시작 — 매일 {SCHEDULE_TIME} 자동 실행")

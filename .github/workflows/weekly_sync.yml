@@ -1,0 +1,28 @@
+name: Weekly DB Sync
+
+on:
+  schedule:
+    - cron: '0 20 * * 0'   # 일요일 20:00 UTC = 월요일 05:00 KST
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sync PriceCharting → Supabase
+        run: python main.py --sync
+        env:
+          PRICECHARTING_TOKEN:  ${{ secrets.PRICECHARTING_TOKEN }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:         ${{ secrets.SUPABASE_KEY }}
