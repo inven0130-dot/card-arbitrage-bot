@@ -40,15 +40,10 @@ def _format(opps: list[dict]) -> str:
         analysis  = opp["analysis"]
         rec       = analysis["recommended"]
         pc_url    = opp.get("pc_url")
-        estimated = opp.get("is_estimated", False)
-
         listing = "🔨" if item["listing_type"] == "auction" else "💳"
-        est_tag = " <i>*추정가</i>" if estimated else ""
 
-        # 카드 제목 (짧게)
         title = item["title"][:50].rstrip()
 
-        # ROI 라인
         if item["listing_type"] == "auction":
             roi_line = (
                 f"최대입찰 <b>${rec['max_buy_usd']:.0f}</b>  │  "
@@ -59,14 +54,13 @@ def _format(opps: list[dict]) -> str:
                 f"ROI <b>{rec['roi']}%</b>  │  수익 <b>${rec['profit_usd']:.0f}</b>"
             )
 
-        # 링크
         links = f"<a href=\"{item['url']}\">eBay</a>"
         if pc_url:
             links += f"  ·  <a href=\"{pc_url}\">PriceCharting</a>"
 
         lines += [
             f"<b>{i}.</b> {listing} {title}",
-            f"CGC10 <b>${item['price']:.0f}</b>  →  PSA10 <b>${analysis['psa10_price']:.0f}</b>{est_tag}",
+            f"CGC10 <b>${item['price']:.0f}</b>  →  PSA10 <b>${analysis['psa10_price']:.0f}</b>",
             roi_line,
             f"📦 {rec['name']} ({rec['turnaround']})  |  🔗 {links}",
             "",

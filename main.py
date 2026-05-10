@@ -9,10 +9,13 @@ Card Arbitrage Bot
   py main.py --now     → 즉시 실행 (테스트용)
   py main.py --sync    → PriceCharting DB만 업데이트 후 종료
 """
+import re
 import sys
 import time
 import schedule
 from datetime import datetime
+
+_YEAR_RE = re.compile(r'\b(19|20)\d{2}\b')
 
 from config import SCHEDULE_TIME
 from ebay_client import get_token, search_cgc10_japanese
@@ -56,13 +59,19 @@ def run_scan():
     opportunities = []
 
     for item in items:
+        # 제목에서 연도 감지 → 2010년 이전 카드 스킵
+        ym = _YEAR_RE.search(item["title"])
+        if ym and int(ym.group(0)) < 2010:
+            continue
+
         psa10_price, matched_name, pc_url = find_psa10_price(item["title"])
 
-        is_estimated = psa10_price is None
-        if is_estimated:
-            psa10_price = round(item["price"] * 2.5, 2)
-            matched_name = None
-            pc_url = None
+        if psa10_price is None:
+            continue
+
+        # 비율 체크: PSA10이 CGC10의 8배 초과면 오매칭으로 간주
+        if psa10_price > item["price"] * 8:
+            continue
 
         result = analyze(item["price"], psa10_price)
 
@@ -70,7 +79,7 @@ def run_scan():
             opp = {
                 "item":         item,
                 "analysis":     result,
-                "is_estimated": is_estimated,
+                "is_estimated": False,
                 "matched_name": matched_name,
                 "pc_url":       pc_url,
             }
