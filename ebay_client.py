@@ -39,7 +39,7 @@ def search_cgc10_japanese(token: str, limit: int = 100) -> list[dict]:
         "https://api.ebay.com/buy/browse/v1/item_summary/search",
         headers={"Authorization": f"Bearer {token}"},
         params={
-            "q": 'pokemon japanese CGC 10 -pristine -"pristine 10" -"CGC Pristine"',
+            "q": 'pokemon japanese CGC 10 -pristine -"pristine 10" -"CGC Pristine" -sealdass -sticker -seal -file -binder -lot -pack -album',
             "category_ids": "183454",  # Pokemon TCG
             "filter": f"price:[{int(MIN_PRICE_USD)}..],priceCurrency:USD",
             "fieldgroups": "EXTENDED",

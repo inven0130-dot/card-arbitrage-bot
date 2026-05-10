@@ -17,6 +17,14 @@ from datetime import datetime
 
 _YEAR_RE = re.compile(r'\b(19|20)\d{2}\b')
 
+# 비카드 제품 or 구세대 세트 키워드 → 스킵
+_SKIP_KW = {
+    "sealdass", "sticker", "seal", "lot", "pack", "file", "binder", "album",
+    "neo genesis", "neo discovery", "neo revelation", "neo destiny",
+    "base set", "jungle", "fossil", "team rocket", "gym heroes", "gym challenge",
+    "orange islands",
+}
+
 from config import SCHEDULE_TIME
 from ebay_client import get_token, search_cgc10_japanese
 from pricecharting_client import download_and_parse
@@ -60,6 +68,11 @@ def run_scan(sync: bool = True):
     opportunities = []
 
     for item in items:
+        # 비카드 제품 / 구세대 세트 스킵
+        title_lower = item["title"].lower()
+        if any(kw in title_lower for kw in _SKIP_KW):
+            continue
+
         # 제목에서 연도 감지 → 2010년 이전 카드 스킵
         ym = _YEAR_RE.search(item["title"])
         if ym and int(ym.group(0)) < 2010:

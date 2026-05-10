@@ -26,7 +26,7 @@ def verify_match(image_url: str, matched_name: str, console_name: str) -> bool:
     try:
         resp = _get_client().messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=10,
+            max_tokens=20,
             messages=[{
                 "role": "user",
                 "content": [
@@ -37,17 +37,19 @@ def verify_match(image_url: str, matched_name: str, console_name: str) -> bool:
                     {
                         "type": "text",
                         "text": (
-                            f"This is a CGC-graded Pokemon card listed on eBay. "
-                            f"I matched it to: '{matched_name}' from '{console_name}'. "
-                            f"Does the card visible inside the case match this? "
-                            f"Answer only YES or NO."
+                            f"This eBay listing shows a CGC-graded Pokemon card in a plastic case. "
+                            f"I identified it as: '{matched_name}' from set '{console_name}'. "
+                            f"Look at the card artwork and name visible inside the case. "
+                            f"Does it match? Answer YES or NO only."
                         ),
                     },
                 ],
             }],
         )
         answer = resp.content[0].text.strip().upper()
-        return answer.startswith("YES")
+        result = answer.startswith("YES")
+        print(f"[Vision] 응답: {answer!r} → {'통과' if result else '제거'}")
+        return result
     except Exception as e:
-        print(f"[Vision] 검증 실패 (통과 처리): {e}")
+        print(f"[Vision] 오류 (통과 처리): {e}")
         return True
