@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(pip install \"supabase==2.3.4\" 2>&1)",
+      "PowerShell(pip install requests python-dotenv schedule 2>&1)",
+      "PowerShell(pip install \"supabase>=2.7.0\" 2>&1)",
+      "PowerShell(schtasks /create /tn \"CardArbit-DailyDownload\" /tr \"py C:\\\\Users\\\\ASUS\\\\Desktop\\\\card-arbitrage-bot\\\\download_daily.py\" /sc daily /st 07:30 /f 2>&1)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Bash(git rm *)",
+      "Bash(git branch *)",
+      "Bash(git push *)"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+
+# 매일 오전 7시 (KST) = 22:00 UTC 전날
+[[deploy.cronJobs]]
+schedule = "0 22 * * *"
+command  = "python main.py --now"

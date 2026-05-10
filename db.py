@@ -58,7 +58,7 @@ def upsert_prices(rows: list[dict]) -> int:
     return total
 
 
-def find_psa10_price(ebay_title: str) -> tuple[float | None, str | None, str | None]:
+def find_psa10_price(ebay_title: str) -> tuple[float | None, str | None, str | None, str | None]:
     """
     Match eBay title to PriceCharting PSA10 price.
     Only matches cards released 2010 or later (pre-2010 = ancient, skip).
@@ -128,7 +128,7 @@ def find_psa10_price(ebay_title: str) -> tuple[float | None, str | None, str | N
             rows = num_matches
         r = rows[0]
         url = _pc_url(r.get("console_name", ""), r.get("product_name", ""))
-        return float(r["psa_10_price"]), r["product_name"], url
+        return float(r["psa_10_price"]), r["product_name"], url, r.get("console_name", "")
 
     # Extra keywords (beyond the first) are potential set-name hints
     extra_kws = keywords[1:] if len(keywords) > 1 else []
@@ -154,7 +154,7 @@ def find_psa10_price(ebay_title: str) -> tuple[float | None, str | None, str | N
     if result:
         return result
 
-    return None, None, None
+    return None, None, None, None
 
 
 # ── Arbitrage log ─────────────────────────────────────────────────────────────

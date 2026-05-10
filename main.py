@@ -65,7 +65,7 @@ def run_scan(sync: bool = True):
         if ym and int(ym.group(0)) < 2010:
             continue
 
-        psa10_price, matched_name, pc_url = find_psa10_price(item["title"])
+        psa10_price, matched_name, pc_url, console_name = find_psa10_price(item["title"])
 
         if psa10_price is None:
             continue
@@ -75,7 +75,9 @@ def run_scan(sync: bool = True):
             continue
 
         # Vision 검증: eBay 이미지가 매칭 카드와 일치하는지 확인
-        if not verify_match(item.get("image", ""), matched_name or "", ""):
+        ok = verify_match(item.get("image", ""), matched_name or "", console_name or "")
+        print(f"[Vision] {'✓' if ok else '✗'} {(matched_name or '')[:40]}")
+        if not ok:
             print(f"[Vision] 오매칭 제거: {item['title'][:60]}")
             continue
 

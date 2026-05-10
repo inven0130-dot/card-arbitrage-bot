@@ -20,7 +20,7 @@ def run():
 
     for item in items:
         comps = _extract_components(item["title"])
-        psa10, matched_name, pc_url = find_psa10_price(item["title"])
+        psa10, matched_name, pc_url, _ = find_psa10_price(item["title"])
 
         row = {
             "title":        item["title"],
