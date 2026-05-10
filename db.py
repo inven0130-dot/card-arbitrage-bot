@@ -35,6 +35,8 @@ def upsert_prices(rows: list[dict]) -> int:
     """Bulk upsert price rows. Returns upserted count."""
     if not rows:
         return 0
+    if not SUPABASE_URL or not SUPABASE_URL.startswith("http"):
+        raise RuntimeError(f"SUPABASE_URL 환경변수 없음 또는 잘못됨: {SUPABASE_URL!r}")
 
     BATCH = 500
     total = 0
@@ -69,6 +71,7 @@ def find_psa10_price(ebay_title: str) -> tuple[float | None, str | None, str | N
     comps = _extract_components(ebay_title)
     keywords  = comps["keywords"]
     card_type = comps["card_type"]
+    card_num  = comps["card_num"]
 
     if not keywords:
         return None, None, None
@@ -87,34 +90,67 @@ def find_psa10_price(ebay_title: str) -> tuple[float | None, str | None, str | N
         if resp.status_code != 200:
             return []
         rows = resp.json() or []
-        # 2010년 이후만 (release_date 컬럼이 없거나 NULL이면 통과)
-        return [
+        # 2010년 이후만 (release_date NULL이면 통과, 있으면 2010+ 필요)
+        rows = [
             r for r in rows
             if not r.get("release_date") or r["release_date"] >= "2010-01-01"
         ]
+        # 단어 경계 검사: "Plan" 검색이 "Plane"에 매칭되는 것 방지
+        pat = re.compile(rf'\b{re.escape(query.split()[0])}\b', re.IGNORECASE)
+        filtered = [r for r in rows if pat.search(r.get("product_name", ""))]
+        return filtered if filtered else rows
 
-    def _pick(rows: list[dict]) -> tuple[float, str, str] | None:
+    def _filter_by_set(rows: list[dict], extra_kws: list[str]) -> list[dict]:
+        """Narrow results by matching extra keywords against console_name."""
+        if not extra_kws or not rows:
+            return rows
+        filtered = [
+            r for r in rows
+            if any(k.lower() in r.get("console_name", "").lower() for k in extra_kws)
+        ]
+        return filtered if filtered else rows  # fall back if nothing matched
+
+    def _pick(rows: list[dict], card_num: str | None = None) -> tuple[float, str, str] | None:
         if not rows:
             return None
+        if card_num:
+            # "#93", "#093", "#0093" 등 zero-padding 변형 모두 체크
+            variants = {card_num, card_num.zfill(2), card_num.zfill(3)}
+            num_matches = [
+                r for r in rows
+                if any(
+                    f"#{v}" in r.get("product_name", "") or f"# {v}" in r.get("product_name", "")
+                    for v in variants
+                )
+            ]
+            if not num_matches:
+                return None  # 카드번호 있는데 매칭 안 됨 → 오매칭 방지
+            rows = num_matches
         r = rows[0]
         url = _pc_url(r.get("console_name", ""), r.get("product_name", ""))
         return float(r["psa_10_price"]), r["product_name"], url
 
+    # Extra keywords (beyond the first) are potential set-name hints
+    extra_kws = keywords[1:] if len(keywords) > 1 else []
+
     for kw in keywords:
-        # Stage 1: name + type (most specific) e.g. "Charizard VSTAR"
+        # Stage 1: name + card_type (e.g. "Charizard VSTAR"), set-filtered
         if card_type:
-            result = _pick(_search(f"{kw} {card_type}", jp_only=True)) or \
-                     _pick(_search(f"{kw} {card_type}", jp_only=False))
+            for jp in (True, False):
+                rows = _filter_by_set(_search(f"{kw} {card_type}", jp_only=jp), extra_kws)
+                result = _pick(rows, card_num)
+                if result:
+                    return result
+
+        # Stage 2: name only, set-filtered, Japanese preferred
+        for jp in (True, False):
+            rows = _filter_by_set(_search(kw, jp_only=jp), extra_kws)
+            result = _pick(rows, card_num)
             if result:
                 return result
 
-        # Stage 2: name only, Japanese
-        result = _pick(_search(kw, jp_only=True))
-        if result:
-            return result
-
-    # Stage 3: first keyword, any region
-    result = _pick(_search(keywords[0], jp_only=False))
+    # Stage 3: first keyword, no set filter, any region (최후 수단)
+    result = _pick(_search(keywords[0], jp_only=False), card_num)
     if result:
         return result
 
@@ -156,13 +192,14 @@ _GRADING = re.compile(
 )
 # Card type suffixes — keep these for matching
 _CARD_TYPE = re.compile(r'\b(VSTAR|VMAX|GX|EX)\b', re.IGNORECASE)
-# Card number: "014/172", "4/102" → capture the leading number
-_CARD_NUM  = re.compile(r'\b(\d{1,3})/\d{2,4}\b')
+# Card number: "014/172" or "#093" → capture the number
+_CARD_NUM  = re.compile(r'(?:\b(\d{1,3})/\d{2,4}\b|#(\d{1,3})\b)')
 _YEAR      = re.compile(r'\b(19|20)\d{2}\b')
 
 # Generic words that are never a card name
 _GENERIC = {"holo", "rare", "ultra", "secret", "trainer", "promo", "stamp",
-            "set", "card", "select", "shipping", "free", "one", "new", "the"}
+            "set", "card", "select", "shipping", "free", "one", "new", "the",
+            "edition", "1st", "2nd", "foil", "full", "art", "alt", "ver"}
 
 
 def _extract_components(title: str) -> dict:
@@ -176,9 +213,13 @@ def _extract_components(title: str) -> dict:
     tm = _CARD_TYPE.search(title)
     card_type = tm.group(1).upper() if tm else None
 
-    # 2. Card number
+    # 2. Card number ("014/172" or "#093")
     nm = _CARD_NUM.search(title)
-    card_num = nm.group(1).lstrip("0") or nm.group(1) if nm else None
+    if nm:
+        raw = nm.group(1) or nm.group(2)
+        card_num = raw.lstrip("0") or raw
+    else:
+        card_num = None
 
     # 3. Clean: remove grading terms, years, card number, card type, lone numbers
     text = _YEAR.sub("", title)
