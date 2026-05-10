@@ -45,6 +45,7 @@ jobs:
           PRICECHARTING_TOKEN:  ${{ secrets.PRICECHARTING_TOKEN }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY:         ${{ secrets.SUPABASE_KEY }}
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
           MIN_ROI:              '50'
           MIN_PRICE_USD:        '100'
           EXCHANGE_RATE_KRW:    '1380'

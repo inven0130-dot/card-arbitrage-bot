@@ -23,6 +23,7 @@ from pricecharting_client import download_and_parse
 from db import upsert_prices, find_psa10_price, log_opportunity
 from arbitrage import analyze
 from notifier import send, send_report
+from vision import verify_match
 
 
 def sync_pricecharting():
@@ -71,6 +72,11 @@ def run_scan(sync: bool = True):
 
         # 비율 체크: PSA10이 CGC10의 8배 초과면 오매칭으로 간주
         if psa10_price > item["price"] * 8:
+            continue
+
+        # Vision 검증: eBay 이미지가 매칭 카드와 일치하는지 확인
+        if not verify_match(item.get("image", ""), matched_name or "", ""):
+            print(f"[Vision] 오매칭 제거: {item['title'][:60]}")
             continue
 
         result = analyze(item["price"], psa10_price)
